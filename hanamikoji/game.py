@@ -135,7 +135,7 @@ class Game:
         # pick piles
         piles = []
         for num in ["first", "second"]:
-            idxs = player.choose(hand, f"{player.name}: pick two cards for {num} pile")
+            idxs = player.choose(hand, f"{player.name}: pick two cards for {num} pile", n_choices=2)
             pile = [hand[i] for i in idxs]
             for card in pile: player.remove_card_from_hand(card)
             piles.append(pile)
@@ -143,8 +143,8 @@ class Game:
         # opponent picks one to keep
         opp_idx = 1 - self.current_player
         pile_idx = self.players[opp_idx].choose(piles, f"{self.players[opp_idx].name}: choose a pile to keep")
-        self.add_cards_to_board(pile_idx, opp_idx)
-        self.add_cards_to_board(1 - pile_idx, self.current_player)
+        self.add_cards_to_board(piles[pile_idx], opp_idx)
+        self.add_cards_to_board(piles[1 - pile_idx], self.current_player)
 
 
     def current_player_and_hand(self) -> tuple[Player, list[int]]:
@@ -186,5 +186,5 @@ if __name__ == "__main__":
     p2 = Player("Bob")
 
     game = Game(p1, p2)
-
+    
     game.play()
