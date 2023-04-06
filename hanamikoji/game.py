@@ -20,12 +20,15 @@ class Game:
         self.players: list[Player] = [player1, player2]
         self.current_player: int = 0
         self.first_player: int = random.choice([0, 1])
-        self.have_winner = False
-        self.deck = []
+        self.deck: list[int] = []
 
-        self.board = {i: [0, 0] for i in range(1, 8)}
+        # winner tracking
+        self.has_winner: bool = False
+        self.winner: int = None
 
-        # Initialize the game
+        self.board: dict[int, list[int]] = {i: [0, 0] for i in range(1, 8)}
+
+        # initialize the game
         self.initialize_game()
     
     def initialize_game(self):
@@ -55,13 +58,6 @@ class Game:
         # swap first player
         self.first_player = 1 - self.first_player
         self.current_player = self.first_player
-
-    def play(self):
-        print("Starting Game!!!")
-        winner = False
-        while not winner:
-            winner = self.round()
-
 
     def turn(self):
         turn_player = self.players[self.current_player]
@@ -97,7 +93,7 @@ class Game:
         # update remaining actions
         turn_player.use_action(action)
 
-    def secret_action(self):
+    def secret_action(self) -> None:
         # Pick a card to put in the secret pile
         player, hand = self.current_player_and_hand()
         card_idx = player.choose(hand, f"{player.name}: pick a card to keep secret: ")
@@ -105,7 +101,7 @@ class Game:
         player.add_secret(card)
         player.remove_card_from_hand(card)
 
-    def trade_off_action(self):
+    def trade_off_action(self) -> None:
         player, hand = self.current_player_and_hand()
         card_idxs = player.choose(hand, f"{player.name}: pick two cards to trade away", n_choices=2)
         cards = [hand[i] for i in card_idxs]
@@ -113,7 +109,7 @@ class Game:
         for card in cards: player.remove_card_from_hand(card)
 
 
-    def gift_action(self):
+    def gift_action(self) -> None:
         # pick three cards
         player, hand = self.current_player_and_hand()
         card_idxs = player.choose(hand, f"{player.name}: pick three cards as gifts", n_choices=3)
@@ -130,7 +126,7 @@ class Game:
         self.add_cards_to_board([card], opp_idx)
         self.add_cards_to_board(cards, self.current_player)
 
-    def competition_action(self):
+    def competition_action(self) -> None:
         player, hand = self.current_player_and_hand()
         # pick piles
         piles = []
@@ -153,9 +149,47 @@ class Game:
     def add_cards_to_board(self, cards: list, player: int) -> None:
         for card in cards: self.board[card][player] += 1
 
-
+    def determine_favors(self) -> dict[int, str]:
+        results = {}
+        for i in self.board.keys():
+            # go through each geisha and see which player has the most points
+            if self.board[i][0] > self.board[i][1]:
+                results[i] = 0
+            elif self.board[i][0] < self.board[i][1]:
+                results[i] = 1
+            else:
+                results[i] = None
+        return results
     
-    def round(self) -> bool:
+    def update_favors(self):
+        # get current favor winners
+        favors = self.determine_favors()
+        for geisha, player in favors.items():
+            # avoid any updates for ties
+            if not player:
+                continue
+
+            # add favor
+            self.players[player].gain_favor(geisha)
+            # other player loses favor of this geisha
+            other_player = 1 - player
+            self.players[other_player].lose_favor(geisha)
+
+    def determine_winner(self) -> None:
+        charm_won = [player.charm_score() > 10 for player in self.players]
+        favors_won = [player.total_favors_won() > 3 for player in self.players]
+        
+        # check for winner
+        if any(charm_won) or any(favors_won): 
+            self.has_winner = True
+        
+        # determine who won
+        if any(charm_won):
+            self.winner = charm_won.index(True)
+        elif any(favors_won):
+            self.winner = favors_won.index(True)
+
+    def round(self) -> None:
         # intialize board state
         self.initialize_round()
         
@@ -165,15 +199,25 @@ class Game:
             
             # swap players
             self.swap_current_player()
+        
         # update geisha favors
+        self.update_favors()
 
         #check wincons
-        found_winner = False
-        return found_winner
-    
+        self.determine_winner()
+
+    def play(self):
+        print("Starting Game!!!")
+        while not self.has_winner:
+            self.round()
+        
+
     def board_to_string(self) -> str:
         names = [player.name for player in self.players]
-        result = [f"{key}: {names[0]}: {vals[0]} {names[1]}: {vals[1]}\tTotal: {GEISHA_POINTS[key]}" 
+        curr_favors = self.determine_favors()
+        print(curr_favors)
+        favor_names = {i: self.players[k].name if k is not None else "None" for i, k in curr_favors.items()}
+        result = [f"{key}: {names[0]}: {vals[0]} {names[1]}: {vals[1]}\t Leader: {favor_names[key]}\tTotal: {GEISHA_POINTS[key]}" 
                   for key, vals in self.board.items()]
         return '\n'.join(result)
     
