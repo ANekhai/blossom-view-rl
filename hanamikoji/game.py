@@ -1,5 +1,6 @@
 import random
 from player import Player
+from agents import RandomAgent
 from constants import GEISHA_COLORS, GEISHA_POINTS, ACTION_NAMES, ACTION_DESCRIPTIONS
 
 ### An attempt to get ChatGPT to write a game class for Hanamikoji ###
@@ -54,6 +55,9 @@ class Game:
             # deal cards
             player.add_cards_to_hand(self.deck[:6])
             self.deck = self.deck[6:]
+
+        # reset board
+        self.board = {i: [0, 0] for i in range(1, 8)}
 
         # swap first player
         self.first_player = 1 - self.first_player
@@ -149,8 +153,9 @@ class Game:
     def add_cards_to_board(self, cards: list, player: int) -> None:
         for card in cards: self.board[card][player] += 1
 
-    def determine_favors(self) -> dict[int, str]:
+    def determine_round_favors(self) -> dict[int, str]:
         results = {}
+
         for i in self.board.keys():
             # go through each geisha and see which player has the most points
             if self.board[i][0] > self.board[i][1]:
@@ -161,9 +166,29 @@ class Game:
                 results[i] = None
         return results
     
+    def get_favors_won(self):
+        favors = {i: None for i in range(1, 8)}
+        
+        for i in range(1, 8):
+            favor_vector = list(map(
+                lambda p: p.has_favor(i), self.players))
+
+            assert(not all(favor_vector))
+
+            if any(favor_vector): 
+                favors[i] = favor_vector.index(True)
+
+        return favors
+
+    
     def update_favors(self):
+        # add secret cards to board
+        for i in range(2):
+            secret_card = self.players[i].secret[0]
+            self.board[secret_card][i] += 1
+
         # get current favor winners
-        favors = self.determine_favors()
+        favors = self.determine_round_favors()
         for geisha, player in favors.items():
             # avoid any updates for ties
             if not player:
@@ -208,14 +233,23 @@ class Game:
 
     def play(self):
         print("Starting Game!!!")
+        round = 1
         while not self.has_winner:
+            print("*" * 10, f"Round {round}", "*" * 10)
             self.round()
+            round += 1
+
+        print(f"Final board state at round {round}:")
+        print(self.board_to_string())
+
+        winning_player = self.players[self.winner]
+        print(f"{winning_player.name} is the winner with {winning_player.charm_score()} charm points and {winning_player.total_favors_won()} favors won! Congratulations!")
         
 
     def board_to_string(self) -> str:
         names = [player.name for player in self.players]
-        curr_favors = self.determine_favors()
-        print(curr_favors)
+        print(self.get_favors_won())
+        curr_favors = self.determine_round_favors()
         favor_names = {i: self.players[k].name if k is not None else "None" for i, k in curr_favors.items()}
         result = [f"{key}: {names[0]}: {vals[0]} {names[1]}: {vals[1]}\t Leader: {favor_names[key]}\tTotal: {GEISHA_POINTS[key]}" 
                   for key, vals in self.board.items()]
@@ -228,6 +262,9 @@ class Game:
 if __name__ == "__main__":
     p1 = Player("Alice")
     p2 = Player("Bob")
+
+    p1 = RandomAgent("Alice-Bot")
+    p2 = RandomAgent("Bob-Bot")
 
     game = Game(p1, p2)
     
