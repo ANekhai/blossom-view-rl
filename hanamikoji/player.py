@@ -61,6 +61,9 @@ class Player:
     def add_traded(self, cards: list[int]) -> None:
         self.traded.extend(cards)
 
+    # check if player has secret or traded-away cards
+    #TODO: implement
+
     def choose(self, options: list, message: str, n_choices: int = 1):
         
         if n_choices < 1: raise ValueError("Cannot make 0 or fewer choices")

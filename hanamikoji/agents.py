@@ -16,3 +16,11 @@ class RandomAgent(Player):
 
         return choice if n_choices > 1 else choice[0]
 
+
+class AiAgent(Player):
+
+    def choose():
+        # run current board state through ML model
+        # make decision based on output
+        pass
+

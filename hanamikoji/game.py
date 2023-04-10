@@ -20,7 +20,7 @@ class Game:
     def __init__(self, player1: Player, player2: Player) -> None:
         self.players: list[Player] = [player1, player2]
         self.current_player: int = 0
-        self.first_player: int = random.choice([0, 1])
+        self.first_player: int = random.choice([0, 1]) # TODO: Validate that players swap between rounds
         self.deck: list[int] = []
 
         # winner tracking
@@ -32,15 +32,13 @@ class Game:
         # initialize the game
         self.initialize_game()
     
-    def initialize_game(self):
-        
+    def initialize_game(self):   
         pass
 
     def reset_game(self) -> None:
         pass
 
     def initialize_round(self):
-        
         # initialize deck
         self.deck = []
         for geisha, value in GEISHA_POINTS.items():
@@ -62,6 +60,8 @@ class Game:
         # swap first player
         self.first_player = 1 - self.first_player
         self.current_player = self.first_player
+
+    ### GAME FUNCTIONS ###
 
     def turn(self):
         turn_player = self.players[self.current_player]
@@ -97,6 +97,39 @@ class Game:
         # update remaining actions
         turn_player.use_action(action)
 
+    def round(self) -> None:
+        # intialize board state
+        self.initialize_round()
+        
+        for turn in range(1, 9):
+            print("*" * 10, f"Turn {turn}: {self.players[self.current_player].name}'s turn", "*" * 10)
+            self.turn()
+            
+            # swap players
+            self.swap_current_player()
+        
+        # update geisha favors
+        self.update_favors()
+
+        #check wincons
+        self.determine_winner()
+
+    def play(self):
+        print("Starting Game!!!")
+        round = 1
+        while not self.has_winner:
+            print("*" * 10, f"Round {round}", "*" * 10)
+            self.round()
+            round += 1
+
+        print(f"Final board state at round {round}:")
+        print(self.board_to_string())
+
+        winning_player = self.players[self.winner]
+        print(f"{winning_player.name} is the winner with {winning_player.charm_score()} charm points and {winning_player.total_favors_won()} favors won! Congratulations!")
+
+    ### ACTION IMPLEMENTATIONS
+
     def secret_action(self) -> None:
         # Pick a card to put in the secret pile
         player, hand = self.current_player_and_hand()
@@ -111,7 +144,6 @@ class Game:
         cards = [hand[i] for i in card_idxs]
         player.add_traded(cards)
         for card in cards: player.remove_card_from_hand(card)
-
 
     def gift_action(self) -> None:
         # pick three cards
@@ -153,6 +185,8 @@ class Game:
     def add_cards_to_board(self, cards: list, player: int) -> None:
         for card in cards: self.board[card][player] += 1
 
+    ### Victory tracking
+
     def determine_round_favors(self) -> dict[int, str]:
         results = {}
 
@@ -180,7 +214,6 @@ class Game:
 
         return favors
 
-    
     def update_favors(self):
         # add secret cards to board
         for i in range(2):
@@ -209,42 +242,11 @@ class Game:
             self.has_winner = True
         
         # determine who won
+        # TODO: check victory edge case
         if any(charm_won):
             self.winner = charm_won.index(True)
         elif any(favors_won):
-            self.winner = favors_won.index(True)
-
-    def round(self) -> None:
-        # intialize board state
-        self.initialize_round()
-        
-        for turn in range(1, 9):
-            print("*" * 10, f"Turn {turn}: {self.players[self.current_player].name}'s turn", "*" * 10)
-            self.turn()
-            
-            # swap players
-            self.swap_current_player()
-        
-        # update geisha favors
-        self.update_favors()
-
-        #check wincons
-        self.determine_winner()
-
-    def play(self):
-        print("Starting Game!!!")
-        round = 1
-        while not self.has_winner:
-            print("*" * 10, f"Round {round}", "*" * 10)
-            self.round()
-            round += 1
-
-        print(f"Final board state at round {round}:")
-        print(self.board_to_string())
-
-        winning_player = self.players[self.winner]
-        print(f"{winning_player.name} is the winner with {winning_player.charm_score()} charm points and {winning_player.total_favors_won()} favors won! Congratulations!")
-        
+            self.winner = favors_won.index(True)       
 
     def board_to_string(self) -> str:
         names = [player.name for player in self.players]
@@ -263,7 +265,7 @@ if __name__ == "__main__":
     p1 = Player("Alice")
     p2 = Player("Bob")
 
-    p1 = RandomAgent("Alice-Bot")
+    # p1 = RandomAgent("Alice-Bot")
     p2 = RandomAgent("Bob-Bot")
 
     game = Game(p1, p2)
