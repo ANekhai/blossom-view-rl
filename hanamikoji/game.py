@@ -189,7 +189,6 @@ class Game:
 
     def determine_round_favors(self) -> dict[int, str]:
         results = {}
-
         for i in self.board.keys():
             # go through each geisha and see which player has the most points
             if self.board[i][0] > self.board[i][1]:
@@ -220,11 +219,14 @@ class Game:
             secret_card = self.players[i].secret[0]
             self.board[secret_card][i] += 1
 
+        print("Final Board State:")
+        print(self.board_to_string())
+
         # get current favor winners
         favors = self.determine_round_favors()
         for geisha, player in favors.items():
             # avoid any updates for ties
-            if not player:
+            if player is None:
                 continue
 
             # add favor
@@ -265,7 +267,7 @@ if __name__ == "__main__":
     p1 = Player("Alice")
     p2 = Player("Bob")
 
-    # p1 = RandomAgent("Alice-Bot")
+    p1 = RandomAgent("Alice-Bot")
     p2 = RandomAgent("Bob-Bot")
 
     game = Game(p1, p2)
